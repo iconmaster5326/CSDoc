@@ -1,4 +1,4 @@
 (use csdoc)
 
-(document kind name "WOW")
-(assert (docs-for name))
+(document procedure (+ . numbers) "Adds numbers.")
+(assert (docs-for +))
