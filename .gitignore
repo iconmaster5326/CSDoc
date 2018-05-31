@@ -1,4 +1,8 @@
+# Chicken files
 /csdoc.so
 /csdoc.import.scm
 /csdoc.import.so
 /salmonella.log
+
+# Eclipse files
+/.project
