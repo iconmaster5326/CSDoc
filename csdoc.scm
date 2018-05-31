@@ -3,13 +3,19 @@
   
   (begin-for-syntax
     (import chicken scheme)
-    (use srfi-69)
+    (use srfi-1 srfi-69)
     
-    ; define storage for all documentation nodes
+    ;; define storage for all documentation nodes
+   
+    ; root: The current node in the documentation tree we're working in
     (define root '())
+    
+    ; nodes: A map of full paths to thier documentation nodes.
+    ; a node is stored as an a-list.
     (define nodes (make-hash-table #:test equal?))
     
-    ; helper functions
+    ;; helper functions
+    ; returns the full path of a node specifier.
     (define (as-node name)
       (if (symbol? name)
         (append root name)
@@ -17,20 +23,58 @@
       )
     )
     
-    ; define handlers for the procedure `document`, handling the creation of new documentation nodes.
+    ; Converts a list of keyword-value pairs into an alist. The key is the keyword, of #f for the unkeyworded args.
+    (define (keywords->alist args)
+      (let* (
+        (result '((#f)))
+        (rest (car result))
+        (kw #f)
+      )
+        (for-each (lambda (arg)
+          (if kw
+            (set! result (cons (cons kw arg) result))
+            (if (keyword? arg)
+               (set! kw arg)
+               (set-cdr! rest (cons arg rest))
+            )
+          )
+        ) args)
+        (set-cdr! rest (reverse! (cdr rest)))
+        result
+      )
+    )
+    
+    ;; define handlers for the procedure `document`, handling the creation of new documentation nodes.
     (define document-handlers (make-hash-table #:test eqv?))
+    
+    ; procedure: a procedure.
+    ; Properties include:
+    ;   name: Its name. A shortcut for (car formals), really.
+    ;   formals: A lambda-list, like the one you give to define to make a procedure.
+    ;   desc: A description of the function.
     (hash-table-set! document-handlers 'procedure (lambda (rest)
       (let* (
         (formals (car rest))
         (body (cdr rest))
         
-        (name (car formals))
+        (raw-name (car formals))
+        (name (if (symbol? raw-name) raw-name (last raw-name)))
+        (args (cdr formals))
+        
+        (properties (keywords->alist body))
+        (positional-args (cdr (assq #f properties)))
+        
+        (node `(procedure
+          (name . ,name)
+          (formals . ,formals)
+          (desc . ,(car positional-args))
+        ))
       )
-        (hash-table-set! nodes (as-node name) body)
+        (hash-table-set! nodes (as-node raw-name) node)
       )
     ))
     
-    ; workaround for issue #1465
+    ;; workaround for issue #1465
     (define (get-keyword kw args . default) (let (
       (tail (memq kw args))
     )
