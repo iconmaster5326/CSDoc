@@ -1,0 +1,6 @@
+(
+  (license "Public Domain")
+  (category doc-tools)
+  (author "Joshua Robbins (iconmaster)")
+  (synopsis "An in-place documentation system for Chicken Scheme.")
+)

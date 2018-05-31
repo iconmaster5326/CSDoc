@@ -1,0 +1,17 @@
+; build steps
+(compile -s csdoc.scm -j csdoc)
+(compile -s csdoc.import.scm -O3 -d0)
+
+; extension information
+(install-extension
+  'csdoc
+  '(
+    ; source files
+    "csdoc.so"
+    "csdoc.import.so"
+  )
+  '(
+    ; properties
+    (version "0.1")
+  )
+)
