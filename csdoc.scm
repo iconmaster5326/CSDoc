@@ -22,11 +22,41 @@
         name
       )
     )
+   
+    ; Expands a doc-string into CSDoc text-block format.
+    (define (expand-doc-text s)
+      (with-input-from-string s (lambda ()
+        (let (
+          (result '())
+          (current-string #f)
+        )
+          (port-for-each (lambda (c)
+            (if (eq? c #\@)
+              (begin
+                (when current-string
+                  (set! result (cons current-string result))
+                  (set! current-string #f)
+                )
+                (set! result (cons (read) result))
+              )
+              (begin
+                (unless current-string (set! current-string ""))
+                (set! current-string (string-append current-string (->string c)))
+              )
+            )
+          ) read-char)
+          (when current-string
+            (set! result (cons current-string result))
+          )
+          (reverse result)
+        )
+      ))
+    )
     
     ; Converts a list of keyword-value pairs into an alist. The key is the keyword, of #f for the unkeyworded args.
     (define (keywords->alist args)
       (let* (
-        (result '((#f)))
+        (result `((#f)))
         (rest (car result))
         (kw #f)
       )
@@ -35,11 +65,11 @@
             (set! result (cons (cons kw arg) result))
             (if (keyword? arg)
                (set! kw arg)
-               (set-cdr! rest (cons arg rest))
+               (set-cdr! rest (cons arg (cdr rest)))
             )
           )
         ) args)
-        (set-cdr! rest (reverse! (cdr rest)))
+        (set-cdr! rest (reverse (cdr rest)))
         result
       )
     )
@@ -49,9 +79,10 @@
     
     ; procedure: a procedure.
     ; Properties include:
-    ;   name: Its name. A shortcut for (car formals), really.
     ;   formals: A lambda-list, like the one you give to define to make a procedure.
     ;   desc: A description of the function.
+    ;   args: A list of descriptions of the arguments.
+    ;   rets: A list of return values, in the order they are returned.
     (hash-table-set! document-handlers 'procedure (lambda (rest)
       (let* (
         (formals (car rest))
@@ -65,9 +96,10 @@
         (positional-args (cdr (assq #f properties)))
         
         (node `(procedure
-          (name . ,name)
           (formals . ,formals)
-          (desc . ,(car positional-args))
+          (desc . ,(apply append (map expand-doc-text positional-args)))
+          (args . ())
+          (rets . ())
         ))
       )
         (hash-table-set! nodes (as-node raw-name) node)
